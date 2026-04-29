@@ -1,0 +1,9 @@
+{
+  "name": "Remix: AuraFit AI",
+  "description": "An advanced AI-powered fitness assessment and coaching platform with real-time posture analysis, personalized plans, and virtual coaching.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": []
+}

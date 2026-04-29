@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'saik13200@gmail.com';
+    }
+
+    function areFriends(u1, u2) {
+      return isSignedIn() && (exists(/databases/$(database)/documents/friendships/$(u1 + '_' + u2)) || exists(/databases/$(database)/documents/friendships/$(u2 + '_' + u1)));
+    }
+
+    function isAcceptedFriend(u1, u2) {
+       let f1 = /databases/$(database)/documents/friendships/$(u1 + '_' + u2);
+       let f2 = /databases/$(database)/documents/friendships/$(u2 + '_' + u1);
+       return isSignedIn() && (
+         (exists(f1) && get(f1).data.status == 'accepted') || 
+         (exists(f2) && get(f2).data.status == 'accepted')
+       );
+    }
+
+    // User Profile Validation
+    function isValidUser(data, isCreate) {
+      let requiredFields = ['name', 'age', 'weight', 'height', 'goal', 'dietPreference', 'activityLevel', 'gender', 'userId', 'updatedAt'];
+      let hasRequired = isCreate ? data.keys().hasAll(requiredFields) : true;
+      
+      return hasRequired
+        && data.userId == request.auth.uid;
+    }
+
+    // Match users collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAcceptedFriend(request.auth.uid, userId);
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming(), true);
+      allow update: if isOwner(userId) && isValidUser(incoming(), false) 
+        && (incoming().userId == existing().userId || !incoming().keys().hasAny(['userId']));
+    }
+
+    // Friendships
+    match /friendships/{friendshipId} {
+      allow get: if isSignedIn() && (request.auth.uid == resource.data.requesterId || request.auth.uid == resource.data.receiverId);
+      allow list: if isSignedIn() && (resource.data.requesterId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().requesterId == request.auth.uid && incoming().status == 'pending';
+      
+      allow update: if isSignedIn() && (
+        request.auth.uid == existing().requesterId || 
+        request.auth.uid == existing().receiverId
+      ) && (
+        // Identity must remain immutable
+        incoming().requesterId == existing().requesterId &&
+        incoming().receiverId == existing().receiverId &&
+        
+        // Status can only change from pending to accepted by the receiver
+        (incoming().status == existing().status || (existing().status == 'pending' && incoming().status == 'accepted' && request.auth.uid == existing().receiverId))
+      );
+      
+      allow delete: if isSignedIn() && (request.auth.uid == existing().requesterId || request.auth.uid == existing().receiverId);
+    }
+
+    // Logs & Errors
+    match /logs/{logId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if isAdmin();
+    }
+
+    match /errors/{errorId} {
+      allow create: if true;
+      allow list, get: if isAdmin();
+    }
+  }
+}

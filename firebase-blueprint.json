@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "The user's personal fitness biometric profile and goals",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "age": { "type": "number" },
+        "weight": { "type": "number" },
+        "height": { "type": "number" },
+        "goal": { "type": "string", "enum": ["weight_loss", "muscle_gain", "maintenance", "overall_fitness"] },
+        "dietPreference": { "type": "string", "enum": ["veg", "non-veg", "vegan"] },
+        "activityLevel": { "type": "string", "enum": ["sedentary", "moderate", "active", "athlete"] },
+        "gender": { "type": "string", "enum": ["male", "female", "other", "prefer_not_to_say"] },
+        "healthConditions": { "type": "array", "items": { "type": "string" } },
+        "allergies": { "type": "array", "items": { "type": "string" } },
+        "userId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "age", "weight", "height", "goal", "dietPreference", "activityLevel", "gender", "userId"]
+    },
+    "Log": {
+      "title": "Activity Log",
+      "description": "System event or user action log",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "details": { "type": "object" }
+      },
+      "required": ["action", "timestamp", "userId"]
+    },
+    "Error": {
+      "title": "Error Log",
+      "description": "Application runtime error log",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "message": { "type": "string" },
+        "stack": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["message", "timestamp"]
+    },
+    "Friendship": {
+      "title": "Friendship",
+      "description": "A connection between two users",
+      "type": "object",
+      "properties": {
+        "requesterId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "requesterName": { "type": "string" },
+        "receiverName": { "type": "string" }
+      },
+      "required": ["requesterId", "receiverId", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles keyed by their unique authentication ID"
+    },
+    "/logs/{logId}": {
+      "schema": "Log",
+      "description": "Global activity tracking logs"
+    },
+    "/errors/{errorId}": {
+      "schema": "Error",
+      "description": "Global error monitoring records"
+    },
+    "/friendships/{friendshipId}": {
+      "schema": "Friendship",
+      "description": "Social connections between users"
+    }
+  }
+}
